@@ -1,0 +1,33 @@
+# Ignore Terraform state files
+*.tfstate
+*.tfstate.backup
+
+# Ignore crash logs
+crash.log
+
+# Ignore CLI configuration files
+.terraform/
+
+# Ignore override files (often used for local-only customization)
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore sensitive key files
+*.pem
+*.key
+*.crt
+*.zip
+
+# Ignore IDE/editor settings (optional, if using VSCode, JetBrains, etc.)
+.vscode/
+.idea/
+.DS_Store
+
+
+.terraform.lock.hcl
+
+secret-key.pem
