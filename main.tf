@@ -146,3 +146,27 @@ module "eks" {
     Terraform   = "true"
   }
 }
+
+module "user_database" {
+  source = "./modules/database/postgres"
+
+  identifier      = "user-service-db"
+  db_name         = "userdb"
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.private_subnets
+  eks_node_sg_id  = module.eks.node_security_group_id # ID của EKS Node Group Security Group
+}
+
+# ---------------------------------------------------------
+# 2. Gọi Module AI Database (DocumentDB / MongoDB)
+# ---------------------------------------------------------
+module "ai_database" {
+  source = "./modules/database/documentdb"
+
+  identifier      = "ai-service-db"
+  db_name        = "aidb"
+  db_username     = "aiadmin"
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.private_subnets
+  eks_node_sg_id  = module.eks.node_security_group_id # Dùng chung SG của EKS Node để cho phép truy cập
+}
