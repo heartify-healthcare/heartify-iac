@@ -6,3 +6,10 @@ variable "node_instance_types" { type = list(string) }
 variable "min_size" { type = number }
 variable "max_size" { type = number }
 variable "desired_size" { type = number }
+variable "k8s_version" {
+
+  description = "CIDR block for the VPC"
+
+  type        = string
+
+}

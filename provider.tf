@@ -1,3 +1,4 @@
+# providers.tf
 terraform {
   required_providers {
     aws = {
@@ -5,8 +6,17 @@ terraform {
       version = "~> 5.0"
     }
   }
+  required_version = ">= 1.5.0"
 }
 
 provider "aws" {
-  region = "ap-southeast-1" # Singapore
+  region = var.aws_region
+  
+  default_tags {
+    tags = {
+      Project     = "Heartify"
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  }
 }
