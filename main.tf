@@ -46,10 +46,13 @@ module "vpc" {
 module "ecr" {
   source           = "./modules/ecr"
   repository_names = [
-    "heartify-denoising",
-    "heartify-classification",
-    "heartify-reporting",
-    "heartify-api"
+    "heartify/ai-service",
+    "heartify/user-service",
+    "heartify/api-gateway",
+    "heartify/classify-model",
+    "heartify/config-server",
+    "heartify/denoised-model",
+    "heartify/eureka-server",
   ]
 }
 
