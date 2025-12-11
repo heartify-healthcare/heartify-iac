@@ -1,18 +1,18 @@
 # addons.tf
 
-# 1. Cài đặt NVIDIA Device Plugin (Bắt buộc để Node nhận GPU)
-resource "helm_release" "nvidia_device_plugin" {
-  name       = "nvidia-device-plugin"
-  repository = "https://nvidia.github.io/k8s-device-plugin"
-  chart      = "nvidia-device-plugin"
-  namespace  = "kube-system"
-  version    = "0.14.0"
+# install NVIDIA Device Plugin for Kubernetes (Compulsory for GPU Node)
+# resource "helm_release" "nvidia_device_plugin" {
+#   name       = "nvidia-device-plugin"
+#   repository = "https://nvidia.github.io/k8s-device-plugin"
+#   chart      = "nvidia-device-plugin"
+#   namespace  = "kube-system"
+#   version    = "0.14.0"
 
-  # Đảm bảo EKS xong rồi mới cài cái này
-  depends_on = [module.eks]
-}
+#   # Đảm bảo EKS xong rồi mới cài cái này
+#   depends_on = [module.eks]
+# }
 
-# 2. Cài đặt AWS Load Balancer Controller (Bắt buộc để có Public Web)
+# Install AWS Load Balancer Controller (Compulsory for ALB Ingress)
 resource "helm_release" "aws_load_balancer_controller" {
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
