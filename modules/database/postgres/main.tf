@@ -31,7 +31,7 @@ resource "aws_db_subnet_group" "this" {
 resource "random_password" "password" {
   length           = 16
   special          = true
-  override_special = "_%@" # Tránh các ký tự gây lỗi URL
+  override_special = "!#$%&*()-_=+[]{}<>:?" # Tránh các ký tự gây lỗi URL
 }
 
 resource "aws_secretsmanager_secret" "this" {
