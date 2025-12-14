@@ -10,7 +10,8 @@ module "eks" {
 
   # allowing public access to the EKS control plane
   cluster_endpoint_public_access = true
-
+  enable_cluster_creator_admin_permissions = true
+  
   eks_managed_node_groups = {
     
     # 1. General Node Group (Backend Java, System)
@@ -89,5 +90,17 @@ module "eks" {
   tags = {
     Environment = var.environment
     Terraform   = "true"
+  }
+}
+
+resource "kubernetes_secret" "db_creds" {
+  metadata {
+    name      = "heartify-db-creds"
+    namespace = "heartify"
+  }
+  data = {
+    # Lấy output từ module database
+    postgres-password = module.user_database.db_password
+    mongo-password    = module.ai_database.db_password
   }
 }

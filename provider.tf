@@ -6,7 +6,6 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    # QUAN TRỌNG: Khai báo nguồn cho helm và kubernetes
     helm = {
       source  = "hashicorp/helm"
       version = "~> 2.12"
@@ -22,19 +21,21 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Provider 1: Kubernetes (Dùng để quản lý resource thuần K8s)
+# --- CẤU HÌNH CHO CI/CD (GITHUB ACTIONS) ---
+# Sử dụng thông tin từ Module Output để đảm bảo Cluster đã được tạo trước khi Provider chạy
+
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
 
   exec {
+    # GitHub Actions thường dùng AWS CLI v2 mới nhất, nhưng Terraform vẫn tương thích tốt nhất với v1beta1
     api_version = "client.authentication.k8s.io/v1beta1"
-    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.aws_region]
     command     = "aws"
   }
 }
 
-# Provider 2: Helm (Dùng để cài đặt các package như Nvidia Plugin, LB Controller)
 provider "helm" {
   kubernetes {
     host                   = module.eks.cluster_endpoint
@@ -42,7 +43,7 @@ provider "helm" {
 
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
-      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.aws_region]
       command     = "aws"
     }
   }

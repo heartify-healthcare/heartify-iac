@@ -25,23 +25,22 @@ output "configure_kubectl" {
 }
 
 output "postgres_endpoint" {
-  description = "Endpoint của User Database (Postgres)"
-  # SỬA TỪ: db_endpoint -> THÀNH: db_instance_endpoint
+  description = "User Database Endpoint (PostgreSQL)"
   value       = module.user_database.postgres_endpoint
 }
 
 output "documentdb_endpoint" {
-  description = "Endpoint của AI Database (DocumentDB)"
-  # SỬA TỪ: db_endpoint -> THÀNH: cluster_endpoint (hoặc endpoint)
+  description = "AI Database Endpoint (DocumentDB)"
   value       = module.ai_database.documentdb_endpoint 
 }
 
 output "ecr_repository_urls" {
-  description = "URL của các ECR Repositories"
+  description = "ECR Repository URLs"
   value       = module.ecr.repository_urls
 }
 
 output "lb_controller_role_arn" {
-  description = "ARN của IAM Role dùng cho Load Balancer Controller"
-  value       = module.lb_role.iam_role_arn
+  description = "IAM Role ARN for LB Controller"
+  value       = module.eks_blueprints_addons.aws_load_balancer_controller.iam_role_arn
 }
+
