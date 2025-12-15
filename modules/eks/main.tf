@@ -87,20 +87,40 @@ module "eks" {
     */
   }
 
+  cluster_addons = {
+    coredns = {
+      most_recent = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      most_recent = true
+    }
+    # Đây là driver quan trọng còn thiếu
+    aws-ebs-csi-driver = {
+      most_recent              = true
+      service_account_role_arn = module.irsa_ebs_csi.iam_role_arn
+    }
+  }
+  
   tags = {
     Environment = var.environment
     Terraform   = "true"
   }
 }
 
-resource "kubernetes_secret" "db_creds" {
-  metadata {
-    name      = "heartify-db-creds"
-    namespace = "heartify"
-  }
-  data = {
-    # Lấy output từ module database
-    postgres-password = module.user_database.db_password
-    mongo-password    = module.ai_database.db_password
+module "irsa_ebs_csi" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.34"
+
+  role_name             = "heartify-ebs-csi"
+  attach_ebs_csi_policy = true
+
+  oidc_providers = {
+    ex = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
   }
 }

@@ -24,14 +24,16 @@ output "configure_kubectl" {
   value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name}"
 }
 
-output "postgres_endpoint" {
+output "postgres_internal_url" {
   description = "User Database Endpoint (PostgreSQL)"
-  value       = module.user_database.postgres_endpoint
+  value       = module.databases.postgres_internal_url
+  sensitive = true
 }
 
-output "documentdb_endpoint" {
-  description = "AI Database Endpoint (DocumentDB)"
-  value       = module.ai_database.documentdb_endpoint 
+output "mongo_internal_url" {
+  description = "AI Database Endpoint (MongoDB)"
+  value       = module.databases.mongo_internal_url
+  sensitive   = true
 }
 
 output "ecr_repository_urls" {
