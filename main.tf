@@ -67,24 +67,8 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 }
 
-module "user_database" {
-  source = "./modules/database/postgres"
+module "databases" {
+  source = "./modules/databases"
 
-  identifier      = "user-service-db"
-  db_name         = "userdb"
-  vpc_id          = module.vpc.vpc_id
-  subnet_ids      = module.vpc.private_subnets
-  eks_node_sg_id  = module.eks.node_security_group_id 
-}
-
-
-module "ai_database" {
-  source = "./modules/database/documentdb"
-
-  identifier      = "ai-service-db"
-  db_name        = "aidb"
-  db_username     = "aiadmin"
-  vpc_id          = module.vpc.vpc_id
-  subnet_ids      = module.vpc.private_subnets
-  eks_node_sg_id  = module.eks.node_security_group_id 
+  depends_on = [module.eks] 
 }
