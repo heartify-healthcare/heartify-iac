@@ -1,228 +1,173 @@
-# heartify-iac
+# Heartify Infrastructure (IaC)
 
-Infrastructure as Code (IaC) for Heartify project using Terraform. This repository provisions a complete AWS infrastructure including VPC networking and EKS Kubernetes cluster.
+This project contains the **Infrastructure as Code (IaC)** source code using **Terraform** to deploy the entire cloud infrastructure for the **Heartify Healthcare Platform** on AWS. The system includes VPC networking, Kubernetes Cluster (EKS), Databases, and Container Registries (ECR).
 
-## Architecture Overview
+## 🏗 System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     AWS Account                             │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              VPC (Virtual Private Cloud)             │   │
-│  │                                                      │   │
-│  │  ┌──────────────┐         ┌──────────────┐           │   │
-│  │  │   Public     │         │   Private    │           │   │
-│  │  │  Subnet 1    │         │  Subnet 1    │           │   │
-│  │  │ (AZ: us-*-a) │         │ (AZ: us-*-a) │           │   │
-│  │  └──────────────┘         └──────────────┘           │   │
-│  │                                                      │   │
-│  │  ┌──────────────┐         ┌──────────────┐           │   │
-│  │  │   Public     │         │   Private    │           │   │
-│  │  │  Subnet 2    │         │  Subnet 2    │           │   │
-│  │  │ (AZ: us-*-b) │         │ (AZ: us-*-b) │           │   │
-│  │  └──────────────┘         └──────────────┘           │   │
-│  │                                                      │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                             │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │         EKS Kubernetes Cluster                        │  │
-│  │                                                       │  │
-│  │  ┌───────────────────────────────────────────────┐    │  │
-│  │  │      EKS Control Plane (Managed)              │    │  │
-│  │  │  • Kubernetes API Server                      │    │  │
-│  │  │  • etcd Database                              │    │  │
-│  │  │  • Scheduler & Controllers                    │    │  │
-│  │  └───────────────────────────────────────────────┘    │  │
-│  │                                                       │  │
-│  │  ┌──────────────┐    ┌──────────────┐                 │  │
-│  │  │  Worker Node │    │  Worker Node │   ...           │  │
-│  │  │   Group 1    │    │   Group 1    │                 │  │
-│  │  │ (min: 1,     │    │ (min: 1,     │                 │  │
-│  │  │  max: 10)    │    │  max: 10)    │                 │  │
-│  │  └──────────────┘    └──────────────┘                 │  │
-│  │                                                       │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-│  ┌───────────────────────────────────────────────────────┐  │
-│  │    KMS Encryption Key (for sensitive data)            │  │
-│  └───────────────────────────────────────────────────────┘  │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+The infrastructure is designed following a Microservices architecture, supporting **High Availability (HA)** across **3 Availability Zones (AZs)** in the **Singapore region (ap-southeast-1)**.
 
-## Project Structure
+### 1. Network (VPC)
+* **CIDR Block:** `10.0.0.0/16`
+* **Availability Zones:** 3 (`ap-southeast-1a`, `ap-southeast-1b`, `ap-southeast-1c`)
+* **Subnets:**
+  * **Public Subnets:** For Load Balancers (Internet-facing) and NAT Gateway.
+  * **Private Subnets:** For EKS Worker Nodes and Databases (High security, no Public IPs).
+* **NAT Gateway:** 1 Single NAT Gateway (Cost-optimized for Dev/Small Prod environments).
 
-```
-heartify-iac/
-├── main.tf              # Root module configuration
-├── variables.tf         # Variable definitions
-├── outputs.tf           # Output values
-├── provider.tf          # AWS provider configuration
-├── terraform.tfstate    # State file (track current infrastructure)
-├── README.md            # This file
-├── .gitignore           # Git ignore rules
-│
-└── modules/             # Reusable Terraform modules
-    ├── vpc/             # VPC networking module
-    │   ├── main.tf
-    │   ├── variables.tf
-    │   └── outputs.tf
-    │
-    └── eks/             # EKS Kubernetes cluster module
-        ├── main.tf
-        ├── variables.tf
-        └── outputs.tf
-```
+### 2. Compute (EKS Cluster)
+* **Cluster Name:** `heartify-cluster`
+* **Kubernetes Version:** 1.29
+* **Node Groups:**
+  * **`general`**: 2 nodes `t3.medium` (Core services: API Gateway, User Service, Web...).
+  * **`ai_cpu`**: 1 node `t3.large` (AI Workloads: Denoising, Classification, RAG).
+* **Storage:** `gp3` volumes (50GB) for each node.
 
-## Prerequisites
+### 3. Databases (Helm Charts)
+Deployed automatically via Terraform Helm Provider into the `heartify` namespace:
+* **PostgreSQL:** Relational database for user data and authentication.
+* **MongoDB:** NoSQL database for unstructured data (Logs, Medical Records).
+* **Qdrant:** Vector Database serving RAG (Retrieval Augmented Generation) features.
 
-- [Terraform](https://www.terraform.io/downloads.html) >= 1.0
-- [AWS CLI](https://aws.amazon.com/cli/) configured with appropriate credentials
-- AWS Account with sufficient permissions
-- `kubectl` (for interacting with the EKS cluster)
+### 4. Container Registry (ECR)
+Repositories for storing Docker Images:
+* `heartify/ai-service`
+* `heartify/api-gateway`
+* `heartify/classify-model`
+* `heartify/config-server`
+* `heartify/denoised-model`
+* `heartify/eureka-server`
+* `heartify/user-service`
 
-## Configuration
+---
 
-### Main Components
+## 🚀 Deployment Guide
 
-1. **VPC Module** (`modules/vpc/`)
-   - Virtual Private Cloud with public and private subnets
-   - Multi-AZ deployment for high availability
-   - NAT Gateway for private subnet internet access
+### Prerequisites
+1.  **Terraform** (v1.5 or later).
+2.  **AWS CLI** (Configured with `aws configure` and Administrator privileges).
+3.  **Kubectl** (For interacting with the Kubernetes cluster).
 
-2. **EKS Module** (`modules/eks/`)
-   - AWS EKS managed Kubernetes cluster
-   - Auto-scaling managed node groups
-   - IRSA (IAM Roles for Service Accounts) enabled
-   - KMS encryption for secrets
-
-3. **KMS Module** (`modules/kms/` - via Terraform modules)
-   - Encryption key for EKS cluster secrets
-
-## Getting Started
-
-### 1. Initialize Terraform
-
+### Step 1: Initialization
+Download necessary providers and modules:
 ```bash
 terraform init
 ```
 
-### 2. Review the Plan
+### Step 2: Plan
+
+Preview the resources to be created to ensure accuracy:
 
 ```bash
-terraform plan
+terraform plan 
+
 ```
 
-### 3. Apply Configuration
+### Step 3: Apply
+
+Provision the infrastructure (This process takes approximately 15-20 minutes):
 
 ```bash
-terraform apply
+terraform apply 
 ```
 
-### 4. Configure kubectl
+---
+
+## ⚙️ Post-Deployment Configuration
+
+After Terraform completes, follow these steps to connect and operate the system:
+
+### 1. Connect to the Cluster (Update Kubeconfig)
+
+Configure your local `kubectl` to control the EKS cluster:
 
 ```bash
-aws eks update-kubeconfig \
-  --region $(terraform output -raw aws_region) \
-  --name $(terraform output -raw cluster_name)
+aws eks update-kubeconfig --region ap-southeast-1 --name heartify-cluster
 ```
 
-### 5. Verify Cluster
+### 2. Retrieve Database Passwords
+
+Passwords are randomly generated by Terraform and stored in the State (injected into K8s Secret `heartify-secrets`).
+To view the passwords:
 
 ```bash
-kubectl get nodes
-kubectl get pods -A
+# Get PostgreSQL Password
+terraform state show module.databases.random_password.postgres_password
+
+# Get MongoDB Password
+terraform state show module.databases.random_password.mongo_password
+
 ```
 
-## Variables
+### 3. Deploy Applications (Kubernetes Manifests)
 
-See [variables.tf](variables.tf) for configurable parameters:
-
-- `cluster_name` - EKS cluster name
-- `cluster_version` - Kubernetes version (e.g., "1.28")
-- `min_size` - Minimum number of worker nodes
-- `max_size` - Maximum number of worker nodes
-- `desired_size` - Desired number of worker nodes
-- `node_instance_types` - EC2 instance types for worker nodes
-
-## Outputs
-
-See [outputs.tf](outputs.tf) for available outputs:
-
-- `cluster_name` - EKS cluster name
-- `cluster_endpoint` - Kubernetes API endpoint
-- `aws_region` - AWS region
-
-Access outputs with:
-
+Use `kubectl` to deploy the manifest files located in the `k8s/` directory:
 ```bash
-terraform output
-terraform output cluster_name
+# 1. Deploy platform services (Eureka, Config Server, Ingress Controller...)
+kubectl apply -f k8s/01-infra-services.yaml
+
+# 2. Deploy business services (User, AI, Gateway...)
+kubectl apply -f k8s/
 ```
 
-## Security Features
+---
 
-✅ **IAM Integration**
-- Cluster creator has admin permissions
-- IRSA (IAM Roles for Service Accounts) enabled
+## 🛠 Operations & Maintenance
 
-✅ **Authentication**
-- API-based authentication with ConfigMap fallback
-- Public API endpoint for kubectl access
+### Scaling Node Groups
 
-✅ **Encryption**
-- KMS key for EKS secrets encryption
+To increase the number of servers when traffic increases:
 
-✅ **Network**
-- VPC isolation with public/private subnets
-- Managed NAT Gateways
+1. Open the EKS configuration file (e.g., `modules/eks/main.tf`).
+2. Modify the `scaling_config` block:
+```hcl
+scaling_config {
+  desired_size = 3
+  min_size     = 1
+  max_size     = 5
+}
+```
 
-## Cleanup
 
-To destroy all resources:
+3. Run `terraform apply`.
+
+### Cost Saving Mode
+
+When the system is not in use (e.g., overnight), you can turn off EC2 Nodes to save costs (EKS Control Plane & NAT Gateway fees still apply):
+
+1. Set `desired_size` and `min_size` to `0`.
+2. Run `terraform apply`.
+
+### Destroy Infrastructure
+
+⚠️ **WARNING:** This action will delete all databases and servers permanently.
+Before destroying, you must delete Kubernetes-created resources (Load Balancers, PVCs) to prevent them from getting stuck:
 
 ```bash
+# 1. Delete Load Balancers & Ingress
+kubectl delete svc --all -n heartify
+kubectl delete ingress --all -n heartify
+
+# 2. Delete Persistent Volume Claims (PVCs)
+kubectl delete pvc --all -n heartify
+
+# 3. Run Terraform Destroy
 terraform destroy
 ```
 
-**⚠️ Warning:** This will delete all infrastructure including the EKS cluster and data.
+---
 
-## Troubleshooting
+## 📂 Project Structure
 
-### Check Terraform State
-
-```bash
-terraform state list
-terraform state show <resource>
+```
+HEARTIFY-IAC/
+├── modules/
+│   ├── databases/      # Helm configurations for Mongo, Postgres, Qdrant
+│   ├── ecr/            # AWS ECR Repositories creation
+│   ├── eks/            # EKS Cluster, Node Groups, IAM Roles configuration
+│   └── vpc/            # Network configuration (Subnets, Route Tables, NAT, IGW)
+├── main.tf             # Main entry point calling modules
+├── variables.tf        # Global variable declarations
+├── outputs.tf          # Important outputs (Cluster Endpoint, VPC ID...)
+└── provider.tf         # AWS & Helm Provider configurations
 ```
 
-### View Detailed Logs
-
-```bash
-export TF_LOG=DEBUG
-terraform plan
-```
-
-### EKS Cluster Access Issues
-
-```bash
-# Verify kubeconfig
-kubectl config view
-
-# Check cluster connection
-kubectl cluster-info
-```
-
-## File References
-
-- [modules/eks/main.tf](modules/eks/main.tf) - EKS configuration
-- [modules/vpc/main.tf](modules/vpc/main.tf) - VPC configuration
-- [main.tf](main.tf) - Root module
-- [variables.tf](variables.tf) - Variable definitions
-- [outputs.tf](outputs.tf) - Output values
-
-## Contributing
-
-Please follow Terraform best practices and test changes with `terraform plan` before applying.
