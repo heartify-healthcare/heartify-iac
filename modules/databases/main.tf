@@ -119,3 +119,38 @@ resource "kubernetes_secret" "heartify_secrets" {
   }
   depends_on = [helm_release.postgresql, helm_release.mongodb]
 }
+
+resource "helm_release" "qdrant" {
+  name             = "qdrant"
+  repository       = "https://qdrant.to/helm" # Repo chính thức của Qdrant
+  chart            = "qdrant"
+  version          = "0.7.5" # Hoặc version mới nhất bạn muốn dùng
+  namespace        = "heartify"
+  create_namespace = false
+
+  # Cấu hình Persistance (Lưu dữ liệu bền vững)
+  set {
+    name  = "persistence.enabled"
+    value = "true"
+  }
+  set {
+    name  = "persistence.size"
+    value = "10Gi" # Dung lượng ổ cứng cho Vector DB
+  }
+  set {
+    name  = "persistence.storageClassName"
+    value = "gp2" # Hoặc gp3 tùy cluster class bạn cài
+  }
+
+  # Cấu hình Replica (Qdrant hỗ trợ Distributed mode rất tốt)
+  set {
+    name  = "replicaCount"
+    value = "1" # Tạm thời để 1 node tiết kiệm, prod có thể tăng lên
+  }
+  
+  # API Key (Nên để trong Secret, ở đây ví dụ set cứng hoặc tắt đi)
+  set {
+    name  = "apiKey"
+    value = "false" # Set thành true và truyền secret nếu cần bảo mật cao
+  }
+}
