@@ -1,24 +1,44 @@
+data "aws_availability_zones" "available" {}
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "5.1.2" # Nên pin version cụ thể
+  version = "5.5.0" # Stable version
 
-  name = var.vpc_name
-  cidr = var.cidr_block
+  name = "${var.project_name}-vpc"
+  cidr = var.vpc_cidr
 
-  azs             = var.azs
-  private_subnets = [for k, v in var.azs : cidrsubnet(var.cidr_block, 4, k)]
-  public_subnets  = [for k, v in var.azs : cidrsubnet(var.cidr_block, 4, k + 4)]
+  azs = slice(data.aws_availability_zones.available.names, 0, 3)
 
+  # CIDR split into subnets.
+  # Private subnets: for node groups and databases (no public IPs).
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  
+  # Public subnets for Load Balancers and NAT Gateways.
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+  # NAT Gateways: allow private nodes to access the internet.
   enable_nat_gateway = true
-  single_nat_gateway = true # Tiết kiệm chi phí (Production nên để false để HA)
+  single_nat_gateway = true # Single NAT to reduce cost (dev/staging). Use false for prod.
   enable_vpn_gateway = false
 
-  # Tags bắt buộc cho EKS Auto-discovery
+  # DNS required for EKS
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  # Tags required by EKS so AWS places load balancers correctly.
+  tags = {
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    Terraform   = "true"
+    Environment = var.environment
+  }
+
   public_subnet_tags = {
-    "kubernetes.io/role/elb" = 1
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/elb"                      = "1"
   }
 
   private_subnet_tags = {
-    "kubernetes.io/role/internal-elb" = 1
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/internal-elb"             = "1"
   }
 }

@@ -1,26 +1,38 @@
-# 1. Gọi Module VPC
-module "networking" {
+module "vpc" {
   source = "./modules/vpc"
 
-  vpc_name   = "my-k8s-vpc"
-  cidr_block = "10.0.0.0/16"
-  azs        = ["ap-southeast-1a", "ap-southeast-1b"] # Chọn AZ phù hợp
+  project_name = var.project_name
+  vpc_cidr     = var.vpc_cidr
+  cluster_name = var.cluster_name
+  environment  = var.environment
 }
 
-# 2. Gọi Module EKS
-module "k8s_cluster" {
-  source = "./modules/eks"
+module "ecr" {
+  source           = "./modules/ecr"
+  repository_names = [
+    "heartify/ai-service",
+    "heartify/user-service",
+    "heartify/api-gateway",
+    "heartify/classify-model",
+    "heartify/config-server",
+    "heartify/denoised-model",
+    "heartify/eureka-server",
+  ]
+}
 
-  cluster_name    = "my-app-cluster"
-  cluster_version = "1.28" # Chọn version K8s mới nhất
-  
-  # Lấy output từ module networking truyền vào module eks
-  vpc_id     = module.networking.vpc_id
-  subnet_ids = module.networking.private_subnets 
+module "eks" {
+  source = "./modules/eks" 
 
-  # Cấu hình node
-  node_instance_types = ["t3.micro"] # Đủ dùng cho test. AI/DL cần g4dn.xlarge
-  min_size     = 1
-  max_size     = 3
-  desired_size = 2
+  cluster_name    = var.cluster_name
+  cluster_version = "1.29"
+  environment     = var.environment
+
+  vpc_id     = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnets
+}
+
+module "databases" {
+  source = "./modules/databases"
+
+  depends_on = [module.eks] 
 }

@@ -1,4 +1,48 @@
-output "configure_kubectl" {
-  description = "Lệnh cấu hình kubectl"
-  value       = "aws eks --region ap-southeast-1 update-kubeconfig --name ${module.k8s_cluster.cluster_name}"
+output "cluster_endpoint" {
+  description = "Endpoint for EKS control plane"
+  value       = module.eks.cluster_endpoint
 }
+
+output "cluster_security_group_id" {
+  description = "Security group ids attached to the cluster control plane"
+  value       = module.eks.cluster_security_group_id
+}
+
+output "region" {
+  description = "AWS region"
+  value       = var.aws_region
+}
+
+output "cluster_name" {
+  description = "Kubernetes Cluster Name"
+  value       = module.eks.cluster_name
+}
+
+# Lệnh để update kubeconfig nhanh
+output "configure_kubectl" {
+  description = "Configure kubectl: run this command"
+  value       = "aws eks update-kubeconfig --region ${var.aws_region} --name ${module.eks.cluster_name}"
+}
+
+output "postgres_internal_url" {
+  description = "User Database Endpoint (PostgreSQL)"
+  value       = module.databases.postgres_internal_url
+  sensitive = true
+}
+
+output "mongo_internal_url" {
+  description = "AI Database Endpoint (MongoDB)"
+  value       = module.databases.mongo_internal_url
+  sensitive   = true
+}
+
+output "ecr_repository_urls" {
+  description = "ECR Repository URLs"
+  value       = module.ecr.repository_urls
+}
+
+output "lb_controller_role_arn" {
+  description = "IAM Role ARN for LB Controller"
+  value       = module.eks_blueprints_addons.aws_load_balancer_controller.iam_role_arn
+}
+
